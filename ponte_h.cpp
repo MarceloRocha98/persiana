@@ -8,23 +8,21 @@ ponte_h::ponte_h()
 
 }
 
-void ponte_h::setup(int pinSentido1,int pinSentido2)
+void ponte_h::setup(int pinSentido)
 {
-    pinS1 = pinSentido1;
-    pinS2 = pinSentido2;
-    pinMode(pinSentido1, OUTPUT);
-    pinMode(pinSentido2, OUTPUT);
+    pin = pinSentido;
+    pinMode(pinSentido, OUTPUT);
 }
 void ponte_h::horario(/* args */)
 {
-    digitalWrite(pinS1,LOW);
-    digitalWrite(pinS2,HIGH);
+    digitalWrite(pin,LOW);
+
 }
 
 void ponte_h::ant_horario()
 {
-    digitalWrite(pinS1,LOW);
-    digitalWrite(pinS1,HIGH);
+    digitalWrite(pin,HIGH);
+
 }
 
 // end pont_h.cpp

@@ -4,13 +4,13 @@
 class ponte_h
 {
 private:
-    int pinS1;
-    int pinS2;
+    int pinSentido;
+
 
 public:
     ponte_h();
 
-    void setup(int pinSentido1,int pinSentido2);
+    void setup(int pinSentido);
     void horario();
     void ant_horario();
 };

@@ -21,6 +21,25 @@ int acao_matrizTransicaoEstados[NUM_ESTADOS][NUM_EVENTOS];
 int proximo_estado_matrizTransicaoEstados[NUM_ESTADOS][NUM_EVENTOS];
 //
 
+//inclusao dos componentes
+#include "encoder.cpp"
+#include "ldr.cpp"
+#include "motor.cpp"
+#include "ponte_h.cpp"
+
+//instaciamento dos componentes
+encoder encoder;
+ldr ldr;
+motor motor;
+ponte_h ponte_h;
+
+
+// Pinos de acionamento aqui
+#define pinMotor 25
+#define pinLDR 25
+#define pinPonte 25
+#define pinEncoder 25
+
 
 
 
@@ -42,6 +61,8 @@ PubSubClient client(MQTT_SERVER.c_str(), 1883, wifiClient);
 void executarAcao(int codigoAcao,int porcentual)
 {
     Serial.println(porcentual);
+    
+
 
 
     switch(codigoAcao)
@@ -50,25 +71,37 @@ void executarAcao(int codigoAcao,int porcentual)
         // abre_persiana(true);
             Serial.print(" Acao: A0 ");
             Serial.println(codigoAcao);
-        break;
+
+            ponte_h.horario();
+            motor.rotaciona(porcentual);
+            break;
     case A1:
         // fecha_persiana(true);
             Serial.print(" Acao: A1");
             Serial.println(codigoAcao);
+
+            ponte_h.ant_horario();
+            motor.rotaciona(porcentual);
         break;
     case A2:
         // abre_persiana_toda(true);
             Serial.print(" Acao: A2 ");
             Serial.println(codigoAcao);
+
+            ponte_h.horario();
+            motor.rotaciona(10);
         break;
     case A3:
         // fecha_persiana_toda(true);
             Serial.print(" Acao: A3");
             Serial.println(codigoAcao);
+
+            ponte_h.ant_horario();
+            motor.rotaciona(10); 
         break;
     } // switch
 
-
+    return retval;
 } // executarAcao
 
 void iniciaMaquinaEstados()
@@ -154,7 +187,10 @@ int obterProximoEstado(int estado, int codigoEvento) {
 
 
 void setup() {
-  
+  // encoder.setup(pinEncoder);
+  // ldr.setup(pinLDR);
+  motor.setup(pinMotor);
+  ponte_h.setup(pinPonte);
 
   Serial.begin(115200);
   iniciaSistema();

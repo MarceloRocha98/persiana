@@ -5,7 +5,7 @@
 class motor
 {
 private:
-    int pin;
+    int pino;
 
 public:
     motor(/* args */);
