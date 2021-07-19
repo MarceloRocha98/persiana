@@ -4,7 +4,7 @@
 class ponte_h
 {
 private:
-    int pinSentido;
+    int pin;
 
 
 public:

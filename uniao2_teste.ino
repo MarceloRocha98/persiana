@@ -101,7 +101,7 @@ void executarAcao(int codigoAcao,int porcentual)
         break;
     } // switch
 
-    return retval;
+   
 } // executarAcao
 
 void iniciaMaquinaEstados()
