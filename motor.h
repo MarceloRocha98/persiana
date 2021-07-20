@@ -5,8 +5,10 @@
 class motor
 {
 private:
-    int pino;
-
+    int pin;
+// int IN1 = D4;
+// int IN2 = D3;
+// int ENA=D2;
 public:
     motor(/* args */);
 

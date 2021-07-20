@@ -12,9 +12,11 @@ void motor::setup(int pin)
 }
 void motor::rotaciona(int value)
 {
-    digitalWrite(pino, HIGH);
+    // digitalWrite(pino, HIGH);
+     analogWrite(pino,1024);
     delay_ms(100*value);
-    digitalWrite(pino, LOW);
+     analogWrite(pino,0);
+    // digitalWrite(pino, LOW);
 }
 
 

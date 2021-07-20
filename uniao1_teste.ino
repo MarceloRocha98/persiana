@@ -21,7 +21,12 @@ int acao_matrizTransicaoEstados[NUM_ESTADOS][NUM_EVENTOS];
 int proximo_estado_matrizTransicaoEstados[NUM_ESTADOS][NUM_EVENTOS];
 //
 
+//////
+int IN1 = D4;
+int IN2 = D3;
+int ENA=D2;
 
+/////
 
 
 const String CLIENT_ID = "d:" + ORG + ":" + DEVICE_TYPE + ":" + DEVICE_ID; //The MQTT client ID is in the format d:orgId:deviceType:deviceId.
@@ -48,23 +53,57 @@ void executarAcao(int codigoAcao,int porcentual)
     {
     case A0:
         // abre_persiana(true);
-            Serial.print(" Acao: A0 ");
+            Serial.println(" Acao: A0 ");
             Serial.println(codigoAcao);
-        break;
+             //Gira o Motor A no sentido horario
+            digitalWrite(ENA, HIGH);
+            digitalWrite(IN1, HIGH);
+            digitalWrite(IN2, LOW);
+            delay(3000);
+             //Para o motor A
+            digitalWrite(IN1, HIGH);
+            digitalWrite(IN2, HIGH);
+            break;
     case A1:
         // fecha_persiana(true);
-            Serial.print(" Acao: A1");
+            Serial.println(" Acao: A1");
             Serial.println(codigoAcao);
+             //Gira o Motor A no sentido anti-horario
+          digitalWrite(ENA, HIGH);
+          digitalWrite(IN1, LOW);
+          digitalWrite(IN2, HIGH);
+          delay(3000);
+            //Para o motor A
+          digitalWrite(IN1, HIGH);
+          digitalWrite(IN2, HIGH);
         break;
     case A2:
         // abre_persiana_toda(true);
-            Serial.print(" Acao: A2 ");
+            Serial.println(" Acao: A2 ");
             Serial.println(codigoAcao);
+                        Serial.println(" Acao: A0 ");
+            Serial.println(codigoAcao);
+             //Gira o Motor A no sentido horario
+            digitalWrite(ENA, HIGH);
+            digitalWrite(IN1, HIGH);
+            digitalWrite(IN2, LOW);
+            delay(3000);
+             //Para o motor A
+            digitalWrite(IN1, HIGH);
+            digitalWrite(IN2, HIGH);
         break;
     case A3:
         // fecha_persiana_toda(true);
-            Serial.print(" Acao: A3");
+            Serial.println(" Acao: A3");
             Serial.println(codigoAcao);
+             //Gira o Motor A no sentido anti-horario
+            digitalWrite(ENA, HIGH);
+            digitalWrite(IN1, LOW);
+            digitalWrite(IN2, HIGH);
+            delay(3000);
+             //Para o motor A
+            digitalWrite(IN1, HIGH);
+            digitalWrite(IN2, HIGH);
         break;
     } // switch
 
@@ -155,6 +194,11 @@ int obterProximoEstado(int estado, int codigoEvento) {
 
 void setup() {
   
+  //////
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  pinMode(ENA, OUTPUT);
+ //////
 
   Serial.begin(115200);
   iniciaSistema();
@@ -219,13 +263,13 @@ if (error) {
     int porcentual=doc["volume"];
     codigoEvento=doc["codigo_evento"];
     Serial.print(" Evento: ");
-    Serial.print(codigoEvento);
+    Serial.print(String(codigoEvento));
 
     codigoAcao = obterAcao(estado, codigoEvento);
     estado = obterProximoEstado(estado, codigoEvento);
     executarAcao(codigoAcao,porcentual);
     Serial.print("Estado: ");
-    Serial.print(estado);
+    Serial.print(String(estado));
 
 //   if ( (strcmp(topic, COMMAND_TOPIC_1) == 0) || ((strcmp(topic,COMMAND_TOPIC_2)==0) )  //1-topico de acionamento manual por voz
 //   {                                                                                    //2-topico de acionamento manual pelo google home
