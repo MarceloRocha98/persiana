@@ -5,42 +5,47 @@
 #include <ESP8266WebServer.h> // do git -> sketch ->incluir biblioteca -> adicionar bibioteca .zip
 #include <WiFiManager.h> // do git -> sketch ->incluir biblioteca -> adicionar bibioteca .zip
 
+#include <Ticker.h>
+Ticker blinker;
+
+#include <SimplyAtomic.h>
 
 const String ORG = "nyvrst";
 const String DEVICE_TYPE = "ESP32";
 const String DEVICE_ID = "001";
 #define DEVICE_TOKEN "e@KaNKbP_e8eGuc@Sn"
 
-//da maq estados
-#include "definicoes_sistema.h"
-int codigoEvento = NENHUM_EVENTO;
-int eventoInterno = NENHUM_EVENTO;
-int estado = ESPERA;
-int codigoAcao;
-int acao_matrizTransicaoEstados[NUM_ESTADOS][NUM_EVENTOS];
-int proximo_estado_matrizTransicaoEstados[NUM_ESTADOS][NUM_EVENTOS];
 //
 
-//inclusao dos componentes
-#include "encoder.cpp"
-#include "ldr.cpp"
-#include "motor.cpp"
-#include "ponte_h.cpp"
+#include "ponte_h.h"
+#include "ldr.h"
+#include "motor.h"
 
-//instaciamento dos componentes
-encoder encoder;
+
+ponte_h ponte_h;
 ldr ldr;
 motor motor;
-ponte_h ponte_h;
 
+//da maq estados
+#include "definicoes_sistema.h"
+volatile int codigoEvento = NENHUM_EVENTO;
+volatile int eventoInterno = NENHUM_EVENTO;
+volatile int estado = ESPERA;
+volatile int codigoAcao=NENHUMA_ACAO;
+volatile int acao_matrizTransicaoEstados[NUM_ESTADOS][NUM_EVENTOS];
+volatile int proximo_estado_matrizTransicaoEstados[NUM_ESTADOS][NUM_EVENTOS];
+volatile int porcentual = 0;
+volatile int horario1 = 0;
+volatile int horario2 = 0;
+volatile int horario_atual = 0;
+//
 
-// Pinos de acionamento aqui
-#define pinMotor 25
-#define pinLDR 25
-#define pinPonte 25
-#define pinEncoder 25
+//////
+int IN1 = D4;
+int IN2 = D3;
+int ENA=D2;
 
-
+/////
 
 
 const String CLIENT_ID = "d:" + ORG + ":" + DEVICE_TYPE + ":" + DEVICE_ID; //The MQTT client ID is in the format d:orgId:deviceType:deviceId.
@@ -58,50 +63,40 @@ PubSubClient client(MQTT_SERVER.c_str(), 1883, wifiClient);
 
 
 //maq de estados
-void executarAcao(int codigoAcao,int porcentual)
+void executarAcao(int codigo_Acao,int porcentual)
 {
-    Serial.println(porcentual);
-    
+    Serial.print(porcentual);
 
-
-
-    switch(codigoAcao)
+    ATOMIC()
     {
-    case A0:
+    switch(codigo_Acao)
+    {
+    case AZERO:
         // abre_persiana(true);
-            Serial.print(" Acao: A0 ");
-            Serial.println(codigoAcao);
-
-            ponte_h.horario();
-            motor.rotaciona(porcentual);
-            break;
+        ponte_h.horario();
+        motor.rotaciona(porcentual);
+        break;
     case A1:
         // fecha_persiana(true);
-            Serial.print(" Acao: A1");
-            Serial.println(codigoAcao);
-
-            ponte_h.ant_horario();
-            motor.rotaciona(porcentual);
+          ponte_h.ant_horario();
+          motor.rotaciona(porcentual);
         break;
     case A2:
         // abre_persiana_toda(true);
-            Serial.print(" Acao: A2 ");
-            Serial.println(codigoAcao);
-
-            ponte_h.horario();
-            motor.rotaciona(10);
+        ponte_h.horario();
+        motor.rotaciona(100);
         break;
     case A3:
         // fecha_persiana_toda(true);
-            Serial.print(" Acao: A3");
-            Serial.println(codigoAcao);
-
-            ponte_h.ant_horario();
-            motor.rotaciona(10); 
+        ponte_h.ant_horario();
+        motor.rotaciona(100);
         break;
     } // switch
+  //  codigoEvento = NENHUM_EVENTO;
+    }
 
-   
+    // codigoAcao = NENHUMA_ACAO;
+
 } // executarAcao
 
 void iniciaMaquinaEstados()
@@ -122,7 +117,7 @@ void iniciaMaquinaEstados()
   acao_matrizTransicaoEstados[OPERACAO_AUTOMATICA][S01] = NENHUMA_ACAO;
   
   proximo_estado_matrizTransicaoEstados[OPERACAO_AUTOMATICA][S02] = OPERACAO_AUTOMATICA;
-  acao_matrizTransicaoEstados[OPERACAO_AUTOMATICA][S02] = A0;
+  acao_matrizTransicaoEstados[OPERACAO_AUTOMATICA][S02] = AZERO;
   
   proximo_estado_matrizTransicaoEstados[OPERACAO_AUTOMATICA][S03] = OPERACAO_AUTOMATICA;
   acao_matrizTransicaoEstados[OPERACAO_AUTOMATICA][S03] = A1;
@@ -137,7 +132,7 @@ void iniciaMaquinaEstados()
   acao_matrizTransicaoEstados[OPERACAO_MANUAL][S11] = NENHUMA_ACAO;
   
   proximo_estado_matrizTransicaoEstados[OPERACAO_MANUAL][S12] = OPERACAO_MANUAL;
-  acao_matrizTransicaoEstados[OPERACAO_MANUAL][S12] = A0;
+  acao_matrizTransicaoEstados[OPERACAO_MANUAL][S12] = AZERO;
   
   proximo_estado_matrizTransicaoEstados[OPERACAO_MANUAL][S13] = OPERACAO_MANUAL;
   acao_matrizTransicaoEstados[OPERACAO_MANUAL][S13] = A1;
@@ -184,13 +179,66 @@ int obterProximoEstado(int estado, int codigoEvento) {
   return proximo_estado_matrizTransicaoEstados[estado][codigoEvento];
 } // obterAcao
 
+void IRAM_ATTR check_acao(void)
+{
+
+    if(codigoEvento!=NENHUM_EVENTO)
+      estado = obterProximoEstado(estado, codigoEvento);
+    
+
+    if(estado==OPERACAO_AUTOMATICA)
+    {
+      // codigo pra operacao automatica que gera codigo evento pra abrir ou fechar
+      int val = ldr.obtem_luminosidade(); //leitura do LDR, A0 pino
+      Serial.print(String(val));
+      if(val>528) //ALTA LUZ->FECHAMENTO
+      {
+        codigoEvento = S03;
+      }else{ //BAIXA LUZ->ABERTURA
+        codigoEvento = S02;
+      }
+    }
+
+    else if(estado==OPERACAO_HORARIOS)
+    {
+    // codigo operacao manual que gera codigo_evento pra abrir ou fechar
+      if(horario_atual<horario1) // fechamento se for antes do horario programado
+      {
+        codigoEvento = S32;
+      }
+      else if(horario_atual>=horario1) // abertura se esta no horario programado
+      {
+        codigoEvento = S31;
+      }
+      else if(horario_atual>=horario2) // fechamento se passou do horario para fechar
+      {
+        codigoEvento = S32;
+      }
+    }
+
+    if(codigoEvento!=NENHUM_EVENTO)
+         codigoAcao = obterAcao(estado, codigoEvento);
+
+    if (codigoAcao != NENHUMA_ACAO && codigoEvento!=NENHUM_EVENTO && (estado==OPERACAO_AUTOMATICA or estado==OPERACAO_HORARIOS))
+         executarAcao(codigoAcao,porcentual);
+    
+  
+  
+
+   timer1_write(500000); //500000 us =0.5s
+  
+  
+} 
 
 
 void setup() {
-  // encoder.setup(pinEncoder);
-  // ldr.setup(pinLDR);
-  motor.setup(pinMotor);
-  ponte_h.setup(pinPonte);
+  
+  //
+  ldr.setup(A0);
+  //
+  ponte_h.setup(IN1,IN2);
+  motor.setup(ENA);
+ //////
 
   Serial.begin(115200);
   iniciaSistema();
@@ -202,6 +250,12 @@ void setup() {
   wifiManager.autoConnect("Persiana"); // (par1,par2) par1=Nome, par2=senha do ponto de acesso
 
   connectMQTTServer();
+  //////
+ timer1_attachInterrupt(check_acao); //Use attach_ms if you need time in
+ timer1_enable(TIM_DIV16, TIM_EDGE, TIM_SINGLE);
+ timer1_write(500000); //500000 us =0.5s
+
+  //////
 }
 
 void loop() {
@@ -230,6 +284,9 @@ void connectMQTTServer() {
 
 //void callback(char* topic, byte* payload, unsigned int length) {
 void callback(char* topic, byte* payload, unsigned int length) {
+  ATOMIC() {
+  // código com interrupções bloqueadas (operações atômicas consecutivas não irão ser interrompidas)
+
   Serial.print("topico ");
   Serial.println(topic);
 
@@ -252,41 +309,28 @@ if (error) {
 
 //   int value = doc["on"];
 //   int horario = doc["horario"];
-    int porcentual=doc["volume"];
+    porcentual=doc["volume"];
     codigoEvento=doc["codigo_evento"];
-    Serial.print(" Evento: ");
-    Serial.print(codigoEvento);
+    
+    if(codigoEvento==S30) //horarios programados com sucesso
+    {
+      horario1 = doc["abertura"];
+      horario2 = doc["fechamento"];
+      horario_atual = doc["hora_atual"];
+    }
+
+    // Serial.print(" Evento: ");
+    // Serial.print(String(codigoEvento));
 
     codigoAcao = obterAcao(estado, codigoEvento);
     estado = obterProximoEstado(estado, codigoEvento);
     executarAcao(codigoAcao,porcentual);
     Serial.print("Estado: ");
-    Serial.print(estado);
-
-//   if ( (strcmp(topic, COMMAND_TOPIC_1) == 0) || ((strcmp(topic,COMMAND_TOPIC_2)==0) )  //1-topico de acionamento manual por voz
-//   {                                                                                    //2-topico de acionamento manual pelo google home
-//      //digitalWrite(pinTeste1, value);
-//      int porcentual = doc["volume"];
-//      Serial.println("Chegou acionamento voz"); 
-//   } 
-
-//   else if(strcmp(topic,COMMAND_TOPIC_3)==0) //topico de acionamento por horario pelo google home
-//   {
-//     // digitalWrite(pinTeste2, value);
-//      Serial.println("Chegou acionamento por horario");
-//   }
-//   else if(strcmp(topic,COMMAND_TOPIC_4)==0) //topico de acionamento por automatico pelo google home
-//   {
-//     // digitalWrite(pinTeste2, value);
-//      Serial.println("Chegou acionamento automatico");
-//   }
-
-
-
-
+    Serial.print(String(estado));
 
 
  //////////
+  }
 }
 
 void configModeCallback( WiFiManager *myWiFiManager) {

@@ -1,5 +1,6 @@
 //encoder.cpp
 #include "encoder.h"
+#include <Arduino.h>
 
 encoder::encoder(/* args */)
 {

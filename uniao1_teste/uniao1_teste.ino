@@ -5,6 +5,10 @@
 #include <ESP8266WebServer.h> // do git -> sketch ->incluir biblioteca -> adicionar bibioteca .zip
 #include <WiFiManager.h> // do git -> sketch ->incluir biblioteca -> adicionar bibioteca .zip
 
+#include <Ticker.h>
+Ticker blinker;
+
+#include <SimplyAtomic.h>
 
 const String ORG = "nyvrst";
 const String DEVICE_TYPE = "ESP32";
@@ -13,12 +17,16 @@ const String DEVICE_ID = "001";
 
 //da maq estados
 #include "definicoes_sistema.h"
-int codigoEvento = NENHUM_EVENTO;
-int eventoInterno = NENHUM_EVENTO;
-int estado = ESPERA;
-int codigoAcao;
-int acao_matrizTransicaoEstados[NUM_ESTADOS][NUM_EVENTOS];
-int proximo_estado_matrizTransicaoEstados[NUM_ESTADOS][NUM_EVENTOS];
+volatile int codigoEvento = NENHUM_EVENTO;
+volatile int eventoInterno = NENHUM_EVENTO;
+volatile int estado = ESPERA;
+volatile int codigoAcao=NENHUMA_ACAO;
+volatile int acao_matrizTransicaoEstados[NUM_ESTADOS][NUM_EVENTOS];
+volatile int proximo_estado_matrizTransicaoEstados[NUM_ESTADOS][NUM_EVENTOS];
+volatile int porcentual = 0;
+volatile int horario1 = 0;
+volatile int horario2 = 0;
+volatile int horario_atual = 0;
 //
 
 //////
@@ -44,17 +52,18 @@ PubSubClient client(MQTT_SERVER.c_str(), 1883, wifiClient);
 
 
 //maq de estados
-void executarAcao(int codigoAcao,int porcentual)
+void executarAcao(int codigo_Acao,int porcentual)
 {
     Serial.println(porcentual);
 
-
-    switch(codigoAcao)
+    ATOMIC()
     {
-    case A0:
+    switch(codigo_Acao)
+    {
+    case AZERO:
         // abre_persiana(true);
-            Serial.println(" Acao: A0 ");
-            Serial.println(codigoAcao);
+            Serial.println(" Acao: AZERO ");
+            Serial.println(codigo_Acao);
              //Gira o Motor A no sentido horario
             digitalWrite(ENA, HIGH);
             digitalWrite(IN1, HIGH);
@@ -67,7 +76,7 @@ void executarAcao(int codigoAcao,int porcentual)
     case A1:
         // fecha_persiana(true);
             Serial.println(" Acao: A1");
-            Serial.println(codigoAcao);
+            Serial.println(codigo_Acao);
              //Gira o Motor A no sentido anti-horario
           digitalWrite(ENA, HIGH);
           digitalWrite(IN1, LOW);
@@ -80,9 +89,9 @@ void executarAcao(int codigoAcao,int porcentual)
     case A2:
         // abre_persiana_toda(true);
             Serial.println(" Acao: A2 ");
-            Serial.println(codigoAcao);
-                        Serial.println(" Acao: A0 ");
-            Serial.println(codigoAcao);
+            Serial.println(codigo_Acao);
+                        Serial.println(" Acao: AZERO ");
+            Serial.println(codigo_Acao);
              //Gira o Motor A no sentido horario
             digitalWrite(ENA, HIGH);
             digitalWrite(IN1, HIGH);
@@ -95,7 +104,7 @@ void executarAcao(int codigoAcao,int porcentual)
     case A3:
         // fecha_persiana_toda(true);
             Serial.println(" Acao: A3");
-            Serial.println(codigoAcao);
+            Serial.println(codigo_Acao);
              //Gira o Motor A no sentido anti-horario
             digitalWrite(ENA, HIGH);
             digitalWrite(IN1, LOW);
@@ -106,7 +115,10 @@ void executarAcao(int codigoAcao,int porcentual)
             digitalWrite(IN2, HIGH);
         break;
     } // switch
+ //   codigoEvento = NENHUM_EVENTO;
+    }
 
+    // codigoAcao = NENHUMA_ACAO;
 
 } // executarAcao
 
@@ -128,7 +140,7 @@ void iniciaMaquinaEstados()
   acao_matrizTransicaoEstados[OPERACAO_AUTOMATICA][S01] = NENHUMA_ACAO;
   
   proximo_estado_matrizTransicaoEstados[OPERACAO_AUTOMATICA][S02] = OPERACAO_AUTOMATICA;
-  acao_matrizTransicaoEstados[OPERACAO_AUTOMATICA][S02] = A0;
+  acao_matrizTransicaoEstados[OPERACAO_AUTOMATICA][S02] = AZERO;
   
   proximo_estado_matrizTransicaoEstados[OPERACAO_AUTOMATICA][S03] = OPERACAO_AUTOMATICA;
   acao_matrizTransicaoEstados[OPERACAO_AUTOMATICA][S03] = A1;
@@ -143,7 +155,7 @@ void iniciaMaquinaEstados()
   acao_matrizTransicaoEstados[OPERACAO_MANUAL][S11] = NENHUMA_ACAO;
   
   proximo_estado_matrizTransicaoEstados[OPERACAO_MANUAL][S12] = OPERACAO_MANUAL;
-  acao_matrizTransicaoEstados[OPERACAO_MANUAL][S12] = A0;
+  acao_matrizTransicaoEstados[OPERACAO_MANUAL][S12] = AZERO;
   
   proximo_estado_matrizTransicaoEstados[OPERACAO_MANUAL][S13] = OPERACAO_MANUAL;
   acao_matrizTransicaoEstados[OPERACAO_MANUAL][S13] = A1;
@@ -190,11 +202,63 @@ int obterProximoEstado(int estado, int codigoEvento) {
   return proximo_estado_matrizTransicaoEstados[estado][codigoEvento];
 } // obterAcao
 
+void ICACHE_RAM_ATTR check_acao(void)
+{
+
+    if(codigoEvento!=NENHUM_EVENTO)
+      estado = obterProximoEstado(estado, codigoEvento);
+    
+
+    if(estado==OPERACAO_AUTOMATICA)
+    {
+      // codigo pra operacao automatica que gera codigo evento pra abrir ou fechar
+      int val = analogRead(A0); //leitura do LDR, A0 pino
+      Serial.println(String(val));
+      if(val>528) //ALTA LUZ->FECHAMENTO
+      {
+        codigoEvento = S03;
+      }else{ //BAIXA LUZ->ABERTURA
+        codigoEvento = S02;
+      }
+    }
+
+    else if(estado==OPERACAO_HORARIOS)
+    {
+    // codigo operacao manual que gera codigo_evento pra abrir ou fechar
+      if(horario_atual<horario1) // fechamento se for antes do horario programado
+      {
+        codigoEvento = S32;
+      }
+      else if(horario_atual>=horario1) // abertura se esta no horario programado
+      {
+        codigoEvento = S31;
+      }
+      else if(horario_atual>=horario2) // fechamento se passou do horario para fechar
+      {
+        codigoEvento = S32;
+      }
+    }
+
+    if(codigoEvento!=NENHUM_EVENTO)
+         codigoAcao = obterAcao(estado, codigoEvento);
+
+    if (codigoAcao != NENHUMA_ACAO && codigoEvento!=NENHUM_EVENTO && (estado==OPERACAO_AUTOMATICA or estado==OPERACAO_HORARIOS))
+         executarAcao(codigoAcao,porcentual);
+    
+  
+  
+
+   timer1_write(500000); //500000 us =0.5s
+  
+  
+} 
 
 
 void setup() {
   
-  //////
+  //
+  pinMode(A0, INPUT);
+  //
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
   pinMode(ENA, OUTPUT);
@@ -210,6 +274,12 @@ void setup() {
   wifiManager.autoConnect("Persiana"); // (par1,par2) par1=Nome, par2=senha do ponto de acesso
 
   connectMQTTServer();
+  //////
+ timer1_attachInterrupt(check_acao); //Use attach_ms if you need time in
+ timer1_enable(TIM_DIV16, TIM_EDGE, TIM_SINGLE);
+ timer1_write(500000); //500000 us =0.5s
+
+  //////
 }
 
 void loop() {
@@ -238,6 +308,9 @@ void connectMQTTServer() {
 
 //void callback(char* topic, byte* payload, unsigned int length) {
 void callback(char* topic, byte* payload, unsigned int length) {
+  ATOMIC() {
+  // código com interrupções bloqueadas (operações atômicas consecutivas não irão ser interrompidas)
+
   Serial.print("topico ");
   Serial.println(topic);
 
@@ -260,16 +333,26 @@ if (error) {
 
 //   int value = doc["on"];
 //   int horario = doc["horario"];
-    int porcentual=doc["volume"];
+    porcentual=doc["volume"];
     codigoEvento=doc["codigo_evento"];
-    Serial.print(" Evento: ");
-    Serial.print(String(codigoEvento));
+    
+    if(codigoEvento==S30) //horarios programados com sucesso
+    {
+      horario1 = doc["abertura"];
+      horario2 = doc["fechamento"];
+      horario_atual = doc["hora_atual"];
+    }
+
+    // Serial.print(" Evento: ");
+    // Serial.print(String(codigoEvento));
 
     codigoAcao = obterAcao(estado, codigoEvento);
     estado = obterProximoEstado(estado, codigoEvento);
     executarAcao(codigoAcao,porcentual);
     Serial.print("Estado: ");
     Serial.print(String(estado));
+
+
 
 //   if ( (strcmp(topic, COMMAND_TOPIC_1) == 0) || ((strcmp(topic,COMMAND_TOPIC_2)==0) )  //1-topico de acionamento manual por voz
 //   {                                                                                    //2-topico de acionamento manual pelo google home
@@ -295,6 +378,7 @@ if (error) {
 
 
  //////////
+  }
 }
 
 void configModeCallback( WiFiManager *myWiFiManager) {

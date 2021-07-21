@@ -15,7 +15,7 @@ void motor::rotaciona(int value)
 {
     // digitalWrite(pino, HIGH);
      digitalWrite(pino, HIGH);
-     delay_ms(100*value); 
+     delay(100*value); 
      digitalWrite(pino, LOW);
 
     // digitalWrite(pino, LOW);
