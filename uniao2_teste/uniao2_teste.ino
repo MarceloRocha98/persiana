@@ -66,34 +66,59 @@ PubSubClient client(MQTT_SERVER.c_str(), 1883, wifiClient);
 void executarAcao(int codigo_Acao,int porcentual)
 {
     Serial.print(porcentual);
-
-    ATOMIC()
-    {
+    
+   
     switch(codigo_Acao)
     {
     case AZERO:
-        // abre_persiana(true);
-        ponte_h.horario();
-        motor.rotaciona(porcentual);
-        break;
+      // abre_persiana(true);
+      Serial.println("Acao 0");
+      //ponte_h.horario();
+      digitalWrite(pinIN1, HIGH);
+      digitalWrite(pinIN2, LOW);
+      delay(porcentual * 1000);
+      //ponte_h.para();
+      digitalWrite(pinIN1, HIGH);
+      digitalWrite(pinIN2, HIGH);
+
+      break;
     case A1:
-        // fecha_persiana(true);
-          ponte_h.ant_horario();
-          motor.rotaciona(porcentual);
-        break;
+      Serial.println("Acao 1");
+      // fecha_persiana(true);
+      //ponte_h.ant_horario();
+      digitalWrite(pinIN1, LOW);
+      digitalWrite(pinIN2, HIGH);
+      delay(porcentual * 1000);
+      //ponte_h.para();
+      digitalWrite(pinIN1, HIGH);
+      digitalWrite(pinIN2, HIGH);
+      break;
     case A2:
-        // abre_persiana_toda(true);
-        ponte_h.horario();
-        motor.rotaciona(100);
-        break;
+      Serial.println("Acao 2");
+      // abre_persiana_toda(true);
+      //ponte_h.horario();
+      digitalWrite(pinIN1, HIGH);
+      digitalWrite(pinIN2, LOW);
+      delay(1000);
+      //ponte_h.para();
+      digitalWrite(pinIN1, HIGH);
+      digitalWrite(pinIN2, HIGH);
+      break;
     case A3:
-        // fecha_persiana_toda(true);
-        ponte_h.ant_horario();
-        motor.rotaciona(100);
-        break;
+      Serial.println("Acao 3");
+      // fecha_persiana_toda(true);
+     // ponte_h.ant_horario();
+      digitalWrite(pinIN1, LOW);
+      digitalWrite(pinIN2, HIGH);
+      delay(1000);
+      //ponte_h.para();
+      digitalWrite(pinIN1, HIGH);
+      digitalWrite(pinIN2, HIGH);
+      break;
     } // switch
   //  codigoEvento = NENHUM_EVENTO;
-    }
+
+ 
 
     // codigoAcao = NENHUMA_ACAO;
 
@@ -190,12 +215,13 @@ void IRAM_ATTR check_acao(void)
     {
       // codigo pra operacao automatica que gera codigo evento pra abrir ou fechar
       int val = ldr.obtem_luminosidade(); //leitura do LDR, A0 pino
-      Serial.print(String(val));
+      Serial.println(String(val));
+    
       if(val>528) //ALTA LUZ->FECHAMENTO
       {
-        codigoEvento = S03;
+        codigoEvento = S03; //S32
       }else{ //BAIXA LUZ->ABERTURA
-        codigoEvento = S02;
+        codigoEvento = S02; //S31
       }
     }
 
@@ -236,8 +262,9 @@ void setup() {
   //
   ldr.setup(A0);
   //
-  ponte_h.setup(IN1,IN2);
   motor.setup(ENA);
+  ponte_h.setup(IN1,IN2);
+  ponte_h.para();
  //////
 
   Serial.begin(115200);

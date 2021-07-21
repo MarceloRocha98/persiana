@@ -28,5 +28,12 @@ void ponte_h::ant_horario()
     digitalWrite(pinIN2, HIGH);
 
 }
+void ponte_h::para()
+{
+     //Para o motor A
+ digitalWrite(pinIN1, HIGH);
+ digitalWrite(pinIN2, HIGH);
+
+}
 
 // end pont_h.cpp

@@ -13,8 +13,8 @@ public:
     motor(/* args */);
 
     void setup(int pin); //ENA
-    void rotaciona(int value);
-};
+
+}; 
 
 
 
