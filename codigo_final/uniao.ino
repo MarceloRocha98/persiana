@@ -74,46 +74,40 @@ void executarAcao(int codigo_Acao,int porcentual)
       // abre_persiana(true);
       Serial.println("Acao 0");
       //ponte_h.horario();
+      digitalWrite(ENA, HIGH);
       digitalWrite(IN1, HIGH);
       digitalWrite(IN2, LOW);
-      delay(porcentual * 1000);
-      //ponte_h.para();
-      digitalWrite(IN1, HIGH);
-      digitalWrite(IN2, HIGH);
+
 
       break;
     case A1:
       Serial.println("Acao 1");
       // fecha_persiana(true);
       //ponte_h.ant_horario();
+      digitalWrite(ENA, HIGH);
       digitalWrite(IN1, LOW);
       digitalWrite(IN2, HIGH);
-      delay(porcentual * 1000);
-      //ponte_h.para();
-      digitalWrite(IN1, HIGH);
-      digitalWrite(IN2, HIGH);
+
       break;
     case A2:
       Serial.println("Acao 2");
       // abre_persiana_toda(true);
       //ponte_h.horario();
-      digitalWrite(pinIN1, HIGH);
-      digitalWrite(pinIN2, LOW);
-      delay(1000);
-      //ponte_h.para();
-      digitalWrite(pinIN1, HIGH);
-      digitalWrite(pinIN2, HIGH);
+      digitalWrite(ENA, HIGH);
+      digitalWrite(IN1, HIGH);
+      digitalWrite(IN2, LOW);
+    
+    
+
       break;
     case A3:
       Serial.println("Acao 3");
       // fecha_persiana_toda(true);
      // ponte_h.ant_horario();
-      digitalWrite(pinIN1, LOW);
-      digitalWrite(pinIN2, HIGH);
-      delay(1000);
-      //ponte_h.para();
-      digitalWrite(pinIN1, HIGH);
-      digitalWrite(pinIN2, HIGH);
+      digitalWrite(ENA, HIGH);
+      digitalWrite(IN1, LOW);
+      digitalWrite(IN2, HIGH);
+
       break;
     } // switch
   //  codigoEvento = NENHUM_EVENTO;
