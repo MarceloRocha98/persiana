@@ -1,6 +1,6 @@
 #include <ESP8266WiFi.h>
-#include <PubSubClient.h> // tem na ide (2.6)
-#include <ArduinoJson.h> //arduino json (5.13.2)
+#include <PubSubClient.h> // tem na ide (ultima versao)
+#include <ArduinoJson.h> //arduino json (ultima versao)
 #include <DNSServer.h> // baixar do git -> sketch ->incluir biblioteca -> adicionar bibioteca .zip
 #include <ESP8266WebServer.h> // do git -> sketch ->incluir biblioteca -> adicionar bibioteca .zip
 #include <WiFiManager.h> // do git -> sketch ->incluir biblioteca -> adicionar bibioteca .zip
